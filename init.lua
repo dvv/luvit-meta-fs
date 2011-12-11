@@ -207,10 +207,23 @@ local function cp_a(src, dst, callback)
 
 end
 
+--
+-- mimick ln -s
+--
+local function ln_s(target, path, callback)
+  path = Path.resolve(process.cwd(), path)
+  Fs.mkdir_p(Path.dirname(path), '0755', function(err)
+    if err then callback(err) ; return end
+    -- FIXME: should we mimick -f -- rm_rf basename(path) before this?
+    Fs.symlink(target, path, 'r', callback)
+  end)
+end
+
 -- export
 return setmetatable({
   mkdir_p = mkdir_p,
   find = find,
   rm_rf = rm_rf,
   cp_a = cp_a,
+  ln_s = ln_s,
 }, { __index = Fs })
