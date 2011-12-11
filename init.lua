@@ -74,7 +74,8 @@ local function find(path, options, callback)
       inos[inode] = true
       -- call matcher
       match_fn(path, st, depth, function(err)
-        if err then cb(err) ; return end
+        -- `true` error means stop going deeper
+        if err and err ~= true then cb(err) ; return end
         -- path is not directory? we re done.
         if not st.is_directory then cb() ; return end
         -- path is directory. read files
