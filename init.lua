@@ -126,7 +126,10 @@ local function rm_rf(path, callback)
     dir_fn = function(path, stat, depth, cb)
       rmdir(path, cb)
     end,
-  }, callback)
+  }, function(err)
+    if err and (err.code == 'ENOENT' or err.code == 'ENOTDIR') then err = nil end
+    callback(err)
+  end)
 
 end
 
