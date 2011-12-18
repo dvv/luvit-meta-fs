@@ -1,0 +1,95 @@
+#!/usr/bin/env luvit
+
+local Fs = require('../')
+local Path = require('path')
+local Process = require('process')
+
+local function run(cmd, callback)
+  local child = Process.spawn('/bin/sh', {'-c', cmd}, {})
+  local stdout = ''
+  child.stdout:on('data', function(data)
+    stdout = stdout .. data
+  end)
+  child.stderr:on('data', function(data)
+    stderr = stderr .. data
+  end)
+  child:on('exit', function (exit_status, term_signal)
+    if callback then callback(exit_status ~= 0, stdout, stderr) end
+  end)
+  return child
+end
+
+--
+-- find all .js files with system `find` and `Fs.find`
+--
+
+local jscount, total = 0, 0;
+Fs.find(process.env.HOME, {
+  --follow = true,
+  --serial = true,
+  match_fn = function (path, stat, depth, cb)
+    -- print(path)
+    total = total + 1
+    if path:sub(-3) == '.js' then
+      jscount = jscount + 1
+    end
+    cb()
+  end
+}, function (err)
+  if err then
+    print('ERR', err)
+  end
+  print('find()', jscount, 'of', total)
+  run('find ' .. process.env.HOME .. ' | wc -l', function (err, findtotal)
+    findtotal = tonumber((findtotal or '0'))
+    run('find ' .. process.env.HOME .. ' -name \\*.js | wc -l', function (err, findjscount)
+      findjscount = tonumber((findjscount or '0'))
+      print('find ~ -name \\*.js | wc -l', findjscount, 'of', findtotal)
+      assert(jscount == findjscount)
+      assert(total == findtotal)
+    end)
+  end)
+end)
+
+--[[
+--
+-- mkdir_p ./HZ/foo./bar
+--
+
+Fs.mkdir_p('HZ/foo./bar', '0771', function (err)
+  if err then
+    print('mkdir_p ERROR', err)
+  end
+  assert(not err)
+  assert(Path.exists_sync('HZ'))
+  Fs.rm_rf('HZ', function (err)
+    if err then
+      print('rm_fr ERROR', err)
+    end
+    assert(not err)
+    assert(not Path.exists_sync('HZ/foo./bar'))
+    assert(not Path.exists_sync('HZ/foo.'))
+    assert(not Path.exists_sync('HZ'))
+  end)
+end)
+
+//
+// ln_sf './ZH/foo./b ar'
+//
+
+Fs.ln_sf('/etc/passwd', 'ZH/foo./b ar', function (err) {
+  if (err) {
+    console.log('ln_sf ERROR', err)
+  }
+  Assert.ok(!err)
+  Assert.ok(Path.existsSync('ZH/foo.'))
+  Fs.rm_rf('ZH', function (err) {
+    if (err) {
+      console.log('rm_fr ERROR', err)
+    }
+    Assert.ok(!err)
+    Assert.ok(!Path.existsSync('HZ'))
+  })
+})
+
+]]--

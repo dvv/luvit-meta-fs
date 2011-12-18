@@ -46,6 +46,7 @@ local function find(path, options, callback)
   options = options or {}
   match_fn = options.match_fn or function(path, stat, depth, cb) cb() end
   dir_fn = options.dir_fn or function(path, stat, depth, cb) cb() end
+  serial = options.serial or false
 
   -- cache highly used functions
   local normalize = Path.normalize
@@ -82,18 +83,34 @@ local function find(path, options, callback)
         readdir(path, function(err, files)
           if err then cb(err) ; return end
           -- recursively iterate thru files
+          -- cache `files` length
           local len = #files
-          local i = 1
-          local function _w()
-            if i > len then
+          -- set starting index
+          -- N.B. for serial execution iterations start by calling
+          -- `collect`, hence it's called one time more,
+          -- hence lesser starting index
+          local collected = serial and 0 or 1
+          local function collect()
+            collected = collected + 1
+            if collected > len then
               -- notify of directory is processed
               dir_fn(path, st, depth, cb)
-            else
-              walk(join(path, files[i]), depth + 1, _w)
-              i = i + 1
+            -- if we iterate sequentially, start new iteration
+            elseif serial then
+              walk(join(path, files[collected]), depth + 1, collect)
             end
           end
-          _w()
+          -- parallel execution and no files? fire callback
+          -- sequential execution? start the first iteration
+          if len == 0 or serial then
+            collect()
+          -- parallel execution? spawn concurrent walkers
+          else
+            local file
+            for _, file in ipairs(files) do
+              walk(join(path, file), depth + 1, collect)
+            end
+          end
         end)
       end)
     end)
@@ -211,14 +228,17 @@ local function cp_a(src, dst, callback)
 end
 
 --
--- mimick ln -s
+-- mimick ln -sf
 --
-local function ln_s(target, path, callback)
+local function ln_sf(target, path, callback)
   path = Path.resolve(process.cwd(), path)
   Fs.mkdir_p(Path.dirname(path), '0755', function(err)
     if err then callback(err) ; return end
-    -- FIXME: should we mimick -f -- rm_rf basename(path) before this?
-    Fs.symlink(target, path, 'r', callback)
+    -- N.B. we mimick -f -- rm_rf(path) before symlinking
+    rm_fr(path, function(err)
+      if err then callback(err) ; return end
+      Fs.symlink(target, path, 'r', callback)
+    end)
   end)
 end
 
@@ -228,5 +248,5 @@ return setmetatable({
   find = find,
   rm_rf = rm_rf,
   cp_a = cp_a,
-  ln_s = ln_s,
+  ln_sf = ln_sf,
 }, { __index = Fs })
