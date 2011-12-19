@@ -65,13 +65,16 @@ local function find(path, options, callback)
     stat(path, function(err, st)
       -- stat failed? step out.
       if err then cb(err) ; return end
-      -- inode seen? step out
+      -- prevent endless loops in follow mode
       -- N.B. this is to cope with symlinks pointing to '.'
-      local inode = st.ino
-      if inos[inode] then cb() ; return end
-      -- mark inode as seen
-      -- FIXME: each allocation causes table rewrite?
-      inos[inode] = true
+      if options.follow then
+        -- inode seen? step out
+        local inode = st.ino
+        if inos[inode] then cb() ; return end
+        -- mark inode as seen
+        -- FIXME: each allocation causes table rewrite?
+        inos[inode] = true
+      end
       -- call matcher
       match_fn(path, st, depth, function(err)
         -- `true` error means stop going deeper
@@ -215,7 +218,7 @@ end
 --
 local function ln_s(target, path, callback)
   path = Path.resolve(process.cwd(), path)
-  Fs.mkdir_p(Path.dirname(path), '0755', function(err)
+  mkdir_p(Path.dirname(path), '0755', function(err)
     if err then callback(err) ; return end
     -- FIXME: should we mimick -f -- rm_rf basename(path) before this?
     Fs.symlink(target, path, 'r', callback)
