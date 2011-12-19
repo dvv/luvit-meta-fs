@@ -4,14 +4,35 @@ local Fs = require('../')
 local Path = require('path')
 local Process = require('process')
 
+local FFI = require('ffi')
+FFI.cdef[[
+extern int chdir(const char *path);
+extern int chroot(const char *path);
+extern int setuid(int);
+extern int setgid(int);
+]]
+assert(FFI.C.chroot)
+
+--
+-- sandbox helper
+--
+local function chroot(path)
+  FFI.C.chroot(path)
+  FFI.C.chdir('/')
+  FFI.C.setgid(500)
+  FFI.C.setuid(500)
+end
+
 local function run(cmd, callback)
   local child = Process.spawn('/bin/sh', {'-c', cmd}, {})
   local stdout = ''
+  local stderr = ''
   child.stdout:on('data', function(data)
     stdout = stdout .. data
   end)
   child.stderr:on('data', function(data)
     stderr = stderr .. data
+    --debug(data)
   end)
   child:on('exit', function (exit_status, term_signal)
     if callback then callback(exit_status ~= 0, stdout, stderr) end
@@ -20,17 +41,29 @@ local function run(cmd, callback)
 end
 
 --
+--  move to sandbox
+--
+chroot('../tmp')
+
+--
 -- find all .js files with system `find` and `Fs.find`
 --
 
-local jscount, total = 0, 0;
-Fs.find(process.env.HOME, {
+local root = '/'
+local function condition(path)
+  return (path:find('e'))
+end
+local findcondition = '\\*e\\*'
+
+local jscount, total = 0, 0
+Fs.find(root, {
   --follow = true,
   --serial = true,
   match_fn = function (path, stat, depth, cb)
     -- print(path)
     total = total + 1
-    if path:sub(-3) == '.js' then
+    --if path:sub(-3) == '.js' then
+    if condition(path) then
       jscount = jscount + 1
     end
     cb()
@@ -40,18 +73,17 @@ Fs.find(process.env.HOME, {
     print('ERR', err)
   end
   print('find()', jscount, 'of', total)
-  run('find ' .. process.env.HOME .. ' | wc -l', function (err, findtotal)
+  run('find ' .. root .. ' | wc -l', function (err, findtotal)
     findtotal = tonumber((findtotal or '0'))
-    run('find ' .. process.env.HOME .. ' -name \\*.js | wc -l', function (err, findjscount)
+    run('find ' .. root .. ' -path ' .. findcondition .. ' | wc -l', function (err, findjscount)
       findjscount = tonumber((findjscount or '0'))
-      print('find ~ -name \\*.js | wc -l', findjscount, 'of', findtotal)
+      print('find ' .. root .. ' -path ' .. findcondition .. ' | wc -l', findjscount, 'of', findtotal)
       assert(jscount == findjscount)
       assert(total == findtotal)
     end)
   end)
 end)
 
---[[
 --
 -- mkdir_p ./HZ/foo./bar
 --
@@ -61,18 +93,19 @@ Fs.mkdir_p('HZ/foo./bar', '0771', function (err)
     print('mkdir_p ERROR', err)
   end
   assert(not err)
-  assert(Path.exists_sync('HZ'))
+  assert(Fs.exists_sync('HZ'))
   Fs.rm_rf('HZ', function (err)
     if err then
       print('rm_fr ERROR', err)
     end
     assert(not err)
-    assert(not Path.exists_sync('HZ/foo./bar'))
-    assert(not Path.exists_sync('HZ/foo.'))
-    assert(not Path.exists_sync('HZ'))
+    assert(not Fs.exists_sync('HZ/foo./bar'))
+    assert(not Fs.exists_sync('HZ/foo.'))
+    assert(not Fs.exists_sync('HZ'))
   end)
 end)
 
+--[[
 //
 // ln_sf './ZH/foo./b ar'
 //
