@@ -21,6 +21,7 @@ local function chroot(path)
   FFI.C.chdir('/')
   FFI.C.setgid(500)
   FFI.C.setuid(500)
+  FFI.C.chdir('/home')
 end
 
 local function run(cmd, callback)
@@ -49,6 +50,8 @@ chroot('../tmp')
 -- find all .js files with system `find` and `Fs.find`
 --
 
+function testFind(done)
+
 local root = '/'
 local function condition(path)
   return (path:find('e'))
@@ -60,7 +63,7 @@ Fs.find(root, {
   --follow = true,
   --serial = true,
   match_fn = function (path, stat, depth, cb)
-    -- print(path)
+    print(path)
     total = total + 1
     --if path:sub(-3) == '.js' then
     if condition(path) then
@@ -70,9 +73,9 @@ Fs.find(root, {
   end
 }, function (err)
   if err then
-    print('ERR', err)
+    print('find ERR', err)
   end
-  print('find()', jscount, 'of', total)
+  print('find(' .. root .. ', ' .. '/e/' .. ')', jscount, 'of', total)
   run('find ' .. root .. ' | wc -l', function (err, findtotal)
     findtotal = tonumber((findtotal or '0'))
     run('find ' .. root .. ' -path ' .. findcondition .. ' | wc -l', function (err, findjscount)
@@ -80,13 +83,18 @@ Fs.find(root, {
       print('find ' .. root .. ' -path ' .. findcondition .. ' | wc -l', findjscount, 'of', findtotal)
       assert(jscount == findjscount)
       assert(total == findtotal)
+      done()
     end)
   end)
 end)
 
+end
+
 --
 -- mkdir_p ./HZ/foo./bar
 --
+
+function testMkdir(done)
 
 Fs.mkdir_p('HZ/foo./bar', '0771', function (err)
   if err then
@@ -102,8 +110,11 @@ Fs.mkdir_p('HZ/foo./bar', '0771', function (err)
     assert(not Fs.exists_sync('HZ/foo./bar'))
     assert(not Fs.exists_sync('HZ/foo.'))
     assert(not Fs.exists_sync('HZ'))
+    done()
   end)
 end)
+
+end
 
 --[[
 //
@@ -126,3 +137,9 @@ Fs.ln_sf('/etc/passwd', 'ZH/foo./b ar', function (err) {
 })
 
 ]]--
+
+testFind(function()
+  testMkdir(function()
+    print('DONE')
+  end)
+end)
