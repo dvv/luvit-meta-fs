@@ -63,7 +63,7 @@ Fs.find(root, {
   --follow = true,
   --serial = true,
   match_fn = function (path, stat, depth, cb)
-    print(path)
+    --print(path)
     total = total + 1
     --if path:sub(-3) == '.js' then
     if condition(path) then
@@ -116,6 +116,30 @@ end)
 
 end
 
+--
+-- mkdir_p ./HZ/foo./bar
+--
+
+function testCp(done)
+
+Fs.cp_a('/usr/bin', '/tmp/usr', function (err)
+  if err then
+    print('cp_a ERROR', err)
+  end
+  assert(not err)
+  assert(Fs.exists_sync('/tmp/usr/bin'))
+  --[[run('diff -Naur /usr/ /tmp/usr', function(err, diff)
+    if err then
+      print('diff ERROR', err)
+    end
+    assert(not diff)
+    done()
+  end)]]--
+  done()
+end)
+
+end
+
 --[[
 //
 // ln_sf './ZH/foo./b ar'
@@ -140,6 +164,8 @@ Fs.ln_sf('/etc/passwd', 'ZH/foo./b ar', function (err) {
 
 testFind(function()
   testMkdir(function()
-    print('DONE')
+    testCp(function()
+      print('DONE')
+    end)
   end)
 end)

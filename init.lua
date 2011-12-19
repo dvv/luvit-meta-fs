@@ -178,19 +178,26 @@ local function cp_a(src, dst, callback)
 
   -- dots are special cases. E.g. cp_a . /foo should copy content of current directory
   -- while cp_a ../foo /bar should copy file/directory ../foo as whole
-  local skip_len = #dirname(src) + 2
-  if src_orig == '.' then
-    skip_len = #src + 2
-  end
+  if src_orig == '.' then src = src .. '/' end
+
+  -- determine how much to strip from the source path
+  local skip_idx = #dirname(src) + 2
+
+  print('PATHS', src, src:sub(skip_idx), dst)
+  process.exit(1)
 
   -- walk over the source
   find(src, {
     -- for each source file
     match_fn = function(path, stat, depth, cb)
       -- compose target path
-      local new_path = join(dst, sub(path, skip_len))
-      --print('?'..path)
-      --print('!'..new_path)
+      local new_path = join(dst, sub(path, skip_idx))
+      print('?'..path)
+      print('!'..new_path)
+      if true then
+        cb()
+        return
+      end
       --p(path, stat)
       -- helper to set target owner and mode to source's ones
       local function perms(err)
