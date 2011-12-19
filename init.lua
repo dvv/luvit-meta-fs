@@ -136,6 +136,7 @@ local function rm_rf(path, callback)
   path = Path.resolve(process.cwd(), path)
   find(path, {
     --follow = false,
+    --serial = true,
     match_fn = function(path, stat, depth, cb)
       if not stat.is_directory then
         unlink(path, cb)
