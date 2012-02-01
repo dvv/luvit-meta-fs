@@ -1,7 +1,7 @@
 PATH  := .:$(PATH)
 
 test:
-	#ndoc
+	tests/test
 
 .PHONY: test docs
 .SILENT:
