@@ -25,13 +25,13 @@ local function chroot(path)
 end
 
 local function run(cmd, callback)
-  local child = Process.spawn('/bin/sh', {'-c', cmd}, {})
+  local child = Process:spawn('/bin/sh', {'-c', cmd}, {})
   local stdout = ''
   local stderr = ''
-  child.stdout:on('data', function(data)
+  child.stdout:on('data', function (data)
     stdout = stdout .. data
   end)
-  child.stderr:on('data', function(data)
+  child.stderr:on('data', function (data)
     stderr = stderr .. data
     --debug(data)
   end)
@@ -162,9 +162,9 @@ Fs.ln_sf('/etc/passwd', 'ZH/foo./b ar', function (err) {
 
 ]]--
 
-testFind(function()
-  testMkdir(function()
-    testCp(function()
+testFind(function ()
+  testMkdir(function ()
+    testCp(function ()
       print('DONE')
     end)
   end)
