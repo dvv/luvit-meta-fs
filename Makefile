@@ -1,7 +1,8 @@
 PATH  := .:$(PATH)
 
 test:
-	tests/test
+	mkdir -p tmp
+	(cd tests; ./test)
 
 .PHONY: test docs
 .SILENT:
