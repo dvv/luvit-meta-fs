@@ -44,9 +44,10 @@ local function find(path, options, callback)
 
   -- defaults
   options = options or {}
-  match_fn = options.match_fn or function(path, stat, depth, cb) cb() end
-  dir_fn = options.dir_fn or function(path, stat, depth, cb) cb() end
-  serial = options.serial or false
+  local match_fn = options.match_fn or function(path, stat, depth, cb) cb() end
+  local dir_fn = options.dir_fn or function(path, stat, depth, cb) cb() end
+  local serial = options.serial or false
+  local resolve = options.resolve or false
 
   -- cache highly used functions
   local normalize = Path.normalize
@@ -55,7 +56,7 @@ local function find(path, options, callback)
   local readdir = Fs.readdir
 
   -- base path
-  local base = Path.resolve(process.cwd(), path)
+  local base = options.resolve ~= false and Path.resolve(process.cwd(), path) or path
 
   -- collect seen inodes
   local inos = {}
