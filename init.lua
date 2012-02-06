@@ -164,8 +164,8 @@ local function cp_a(src, dst, callback)
   local join = Path.join
   local dirname = Path.dirname
   local basename = Path.basename
-  local read = Fs.read_file
-  local write = Fs.write_file
+  local read = Fs.readFile
+  local write = Fs.writeFile
   local readlink = Fs.readlink
   local symlink = Fs.symlink
   local chmod = Fs.chmod
